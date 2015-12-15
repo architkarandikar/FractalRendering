@@ -4,12 +4,18 @@
 #include <vector>
 #include <iostream>
 #include <algorithm>
+#include <queue>
+#include <utility>
 
 #include "triangulation.h"
 
 using namespace std;
 
 namespace CMU462 {
+
+const float eps=1.0e-20;
+int xinc[4]={0,0,-1,1};
+int yinc[4]={-1,1,0,0};
 
 inline void alpha_compost( unsigned char* dst, Color newColor ) {
   Color prevColor;
@@ -28,14 +34,25 @@ inline void alpha_compost( unsigned char* dst, Color newColor ) {
 
 void SoftwareRendererImp::draw_svg( SVG& svg ) {
 
+  //cerr<<svg.width<<" "<<svg.height<<"\n";
+
   supersample_target = new unsigned char[4 * sample_rate * sample_rate * target_w * target_h];
   memset(supersample_target, 255, 4 * sample_rate * sample_rate * target_w * target_h);
+  //------ Added --------------
+  targeted = new int[4 * sample_rate * sample_rate * target_w * target_h];
+  memset(targeted, 0, 16 * sample_rate * sample_rate * target_w * target_h);
 
+  dst = new int[4 * sample_rate * sample_rate * target_w * target_h];
+  memset(dst, 0, 16 * sample_rate * sample_rate * target_w * target_h);
+  //------ End Added ----------
+
+  // -------- Removed -------------
   // draw all elements
   for ( size_t i = 0; i < svg.elements.size(); ++i ) {
     group_transformation = canvas_to_screen;
     draw_element(svg.elements[i]);
   }
+  // -------- End Removed ---------
 
   // set top level transformation
   transformation = canvas_to_screen;
@@ -50,6 +67,73 @@ void SoftwareRendererImp::draw_svg( SVG& svg ) {
   rasterize_line(a.x, a.y, c.x, c.y, Color::Black);
   rasterize_line(d.x, d.y, b.x, b.y, Color::Black);
   rasterize_line(d.x, d.y, c.x, c.y, Color::Black);
+
+  // -------- Added -------------
+
+  /*Vector2D A=transform(Vector2D(svg.width/2,5));
+  Vector2D B=transform(Vector2D(5,svg.height-5));
+  Vector2D C=transform(Vector2D(svg.width-5,svg.height-5));
+
+  //rasterize_line(p1.x, p1.y, p2.x, p2.y, Color::Black);
+  //rasterize_point(p1.x, p1.y, Color::Black);
+  //rasterize_point(p1.x+1, p1.y, Color::Black);
+  //rasterize_point(p1.x, p1.y+1, Color::Black);
+  //rasterize_point(p1.x+1, p1.y+1, Color::Black);
+
+  rasterize_line(A.x, A.y, B.x, B.y, Color(1.0,0.0,0.0));
+  rasterize_line(B.x, B.y, C.x, C.y, Color(1.0,0.0,0.0));
+  rasterize_line(C.x, C.y, A.x, A.y, Color(1.0,0.0,0.0));
+
+  Vector2D p=(A+B+C)/3.0;
+  //for(int i=0; i<1000000; ++i)
+  for(int i=0; i<1000000; ++i)
+  {
+    int r=std::rand()%3;
+    if(r==0) p=(p+A)/2;
+    else if(r==1) p=(p+B)/2;
+    else p=(p+C)/2;
+    rasterize_point(p.x, p.y, Color::Black);
+    //rasterize_point(p.x+1, p.y, Color::Black);
+    //rasterize_point(p.x, p.y+1, Color::Black);
+    //rasterize_point(p.x+1, p.y+1, Color::Black);
+  }*/
+
+  // -------- End Added -------------
+
+  // -------- Added -----------------
+
+  /*Vector2D p(0.0,0.0);
+  Vector2D tp=transform(Vector2D((p.x+3.5)*svg.width/7.0, (p.y+1)*svg.height/12.0));
+  rasterize_point_2(tp.x, tp.y, Color(0.0,1.0,0.0));
+
+  for(int i=0; i<1000000; ++i) {
+    Vector2D q;
+
+    int r=std::rand()%100;
+    if(r<1) {
+      q.x=0;
+      q.y=0.16*p.y;
+    }
+    else if(r<86) {
+      q.x=0.85*p.x+0.04*p.y;
+      q.y=-0.04*p.x+0.85*p.y+1.6;
+    }
+    else if(r<93) {
+      q.x=0.2*p.x-0.26*p.y;
+      q.y=0.23*p.x+0.22*p.y+1.6;
+    }
+    else {
+      q.x=-0.15*p.x+0.28*p.y;
+      q.y=0.26*p.x+0.24*p.y+0.44;
+    }
+
+    p=q;
+    Vector2D tp=transform(Vector2D((p.x+3.5)*svg.width/7.0, (p.y+1.0)*svg.height/12.0));
+    rasterize_point_2(tp.x, tp.y, Color(0.0,1.0,0.0));
+    //rasterize_point(tp.x, tp.y, Color::Black);
+  }*/
+
+  // -------- End Added -------------  
 
   // resolve and send to render target
   resolve();
@@ -110,6 +194,9 @@ void SoftwareRendererImp::draw_element( SVGElement* element ) {
     case GROUP:
       group_transformation = group_transformation * (element->transform);
       draw_group(static_cast<Group&>(*element));
+      break;
+    case IFS:
+      draw_ifs(static_cast<Ifs&>(*element));
       break;
     default:
       break;
@@ -180,7 +267,7 @@ void SoftwareRendererImp::draw_rect( Rect& rect ) {
     rasterize_line( p2.x, p2.y, p0.x, p0.y, c );
   }
 
-  delete[] supersample_target;
+  //delete[] supersample_target;
 }
 
 void SoftwareRendererImp::draw_polygon( Polygon& polygon ) {
@@ -242,13 +329,147 @@ void SoftwareRendererImp::draw_group( Group& group ) {
 
 }
 
+void SoftwareRendererImp::draw_ifs( Ifs& ifs ) {
+
+  //cerr<<ifs.transformations[0]<<ifs.probabilities[0]<<"\n";
+  /*Vector2D p(0.0,0.0);
+  Vector2D tp=transform(Vector2D((p.x+3.5)*600.0/7.0, (p.y+1.0)*600.0/12.0));
+  rasterize_point_2(tp.x, tp.y, Color(0.0,1.0,0.0));
+
+  for(int i=0; i<1000000; ++i) {
+    Vector2D q;
+
+    float r=(float)(std::rand()) / RAND_MAX;
+    if(r<=0.01) {
+      q.x=0;
+      q.y=0.16*p.y;
+    }
+    else if(r<=0.86) {
+      q.x=0.85*p.x+0.04*p.y;
+      q.y=-0.04*p.x+0.85*p.y+1.6;
+    }
+    else if(r<=0.93) {
+      q.x=0.2*p.x-0.26*p.y;
+      q.y=0.23*p.x+0.22*p.y+1.6;
+    }
+    else {
+      q.x=-0.15*p.x+0.28*p.y;
+      q.y=0.26*p.x+0.24*p.y+0.44;
+    }
+
+    p=q;
+    if(i<10) cout<<p<<"\n";
+    Vector2D tp=transform(Vector2D((p.x+3.5)*600.0/7.0, (p.y+1.0)*600.0/12.0));
+    rasterize_point_2(tp.x, tp.y, Color(0.0,1.0,0.0));
+    //rasterize_point(tp.x, tp.y, Color::Black);
+  }*/
+
+  /*for(int i=0; i<4; ++i)
+    cerr<<ifs.transformations[i]<<ifs.probabilities[i]<<"\n";*/
+
+  Vector3D p(ifs.seed.x,ifs.seed.y,1.0);
+  Vector3D tp=ifs.renderTransformation*p;
+  Vector2D rp=transform(Vector2D(tp.x,tp.y));
+  rasterize_point_2(rp.x, rp.y, Color(0.0,1.0,0.0));
+
+  for(int iter=0; iter<1000000; ++iter) {
+    float r=(float)(std::rand()) / RAND_MAX;
+
+    float cp=0.0;
+    for(int i=0; i<(int)ifs.transformations.size(); ++i) {
+      cp+=ifs.probabilities[i];
+      //cerr<<cp<<"\n";
+
+      if(r<=cp) {
+        //if(iter<10) cout<<"@ "<<i<"\n";
+        p = ifs.transformations[i] * p;
+        break;
+      }
+    }
+    //if(iter<10) cout<<"\n"<<p<<"\n";
+
+    tp=ifs.renderTransformation*p;
+    Vector2D rp=transform(Vector2D(tp.x,tp.y));
+    rasterize_point_2(rp.x, rp.y, Color(0.0,1.0,0.0));
+  }
+  //cout<<ifs.renderTransformation;
+}
+
 // Rasterization //
 
 // The input arguments in the rasterization functions 
 // below are all defined in screen space coordinates
 
-void SoftwareRendererImp::rasterize_point( float x, float y, Color color ) {
+// -------- Added ----------------
+void SoftwareRendererImp::add_to_target(int ix, int iy, Color color) {
+  int sx=ix/sample_rate, dx=ix%sample_rate;
+  int sy=iy/sample_rate, dy=iy%sample_rate;
 
+  unsigned char tmp[4];
+  float_to_uint8( tmp , &color.r );
+
+  /*if(color.r>0.0)
+    cerr<<" @@@ "<<color
+      <<" --- "<<(int)supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx ) + 0]
+      <<" --- "<<(int)supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx ) + 1]
+      <<" --- "<<(int)supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx ) + 2]<<"\n"
+      <<" --- "<<(int)tmp[0]
+      <<" --- "<<(int)tmp[1]
+      <<" --- "<<(int)tmp[2]<<"\n";*/
+
+  if(targeted[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] == 0)
+  {
+      targeted[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] = 1;
+      supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] = 0;
+      supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx) + 1] = 0;
+      supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx) + 2] = 0;
+  }
+
+  supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] =
+    (unsigned char)min((int)(supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )])+(int)tmp[0],255);
+  supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx) + 1] =
+    (unsigned char)min((int)(supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx) + 1])+(int)tmp[1],255);
+  supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx) + 2] =
+    (unsigned char)min((int)(supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx) + 2])+(int)tmp[2],255);
+  supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx ) + 3] = 255;
+  //supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx ) + 3] =
+    //min(supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx ) + 3] , (unsigned char)255);
+
+  rmax=max(rmax,tmp[0]/255.0f);
+  gmax=max(gmax,tmp[1]/255.0f);
+  bmax=max(bmax,tmp[2]/255.0f);
+}
+// -------- End Added ------------
+
+// -------- Added ---------------
+void SoftwareRendererImp::rasterize_point_2( float x, float y, Color color ) {
+
+  if(x<0 or x>target_w) return;
+  if(y<0 or y>target_h) return;
+
+  x = max( x , 1.0f/(2.0f*sample_rate) + eps ); x = min( x , target_w - 1.0f/(2.0f*sample_rate) - eps );
+  y = max( y , 1.0f/(2.0f*sample_rate) + eps ); y = min( y , target_h - 1.0f/(2.0f*sample_rate) - eps );
+
+  float ex=x*sample_rate;
+  float ey=y*sample_rate;
+
+  int ix=(int)(ex-0.5);
+  int iy=(int)(ey-0.5);
+
+  float fx=ix+0.5;
+  float fy=iy+0.5;
+
+  float x1=ex-fx, y1=ey-fy;
+  float x2=1.0-x1, y2=1.0-y1;
+
+  add_to_target(ix,iy,x2*y2*color);
+  add_to_target(ix,iy+1,x2*y1*color);
+  add_to_target(ix+1,iy,x1*y2*color);
+  add_to_target(ix+1,iy+1,x1*y1*color);
+}
+// -------- End Added -----------
+
+void SoftwareRendererImp::rasterize_point( float x, float y, Color color ) {
   // fill in the nearest pixel
   int sx = (int) floor(x);
   int sy = (int) floor(y);
@@ -272,8 +493,12 @@ void SoftwareRendererImp::rasterize_line( float x0, float y0,
 
   float eps = (float) 1.0e-15;
 
+
+
   if( abs(x0-x1) < eps && abs(y0-y1) < eps )
     rasterize_point( x0, y0, color );
+
+
   else if( abs(x0-x1) > abs(y0-y1) ) {
     if( x0 > x1 ) {
       swap(x0,x1);
@@ -312,6 +537,8 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
 
   float eps = (float) 1.0e-15;
 
+
+
   int bxmin = min( min( (int) floor(x0), (int) floor(x1) ), (int) floor(x2)  );
   int bxmax = max( max( (int) ceil(x0), (int) ceil(x1) ), (int) ceil(x2)  );
   int bymin = min( min( (int) floor(y0), (int) floor(y1) ), (int) floor(y2)  );
@@ -324,8 +551,14 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
           float cx = (float) x + 1.0 * (2*dx+1) / (2*sample_rate), cy = (float) y + 1.0 * (2*dy+1) / (2*sample_rate);
           if( line_side_test( x0, y0, x1, y1, cx, cy ) * line_side_test( x0, y0, x1, y1, x2, y2 ) > -eps && 
               line_side_test( x1, y1, x2, y2, cx, cy ) * line_side_test( x1, y1, x2, y2, x0, y0 ) > -eps && 
+
+
               line_side_test( x2, y2, x0, y0, cx, cy ) * line_side_test( x2, y2, x0, y0, x1, y1 ) > -eps ) {
-            alpha_compost( &supersample_target[4 * ( (x + y * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] , color );
+
+
+              alpha_compost( &supersample_target[4 * ( (x + y * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] , color );
+
+
           }
         }
 }
@@ -374,10 +607,106 @@ void SoftwareRendererImp::resolve( void ) {
   // Implement supersampling
   // You may also need to modify other functions marked with "Task 3".
 
-  for( int y = 0; y < target_h; ++y )
+  // -------- Added ---------------
+
+  /*float rmax=0.0,gmax=0.0,bmax=0.0;
+  for( int y = 0; y < target_h; ++y ) {
+    for( int x = 0; x < target_w; ++x ) {  
+      for( int dy = 0; dy < sample_rate; ++dy ) {
+        for( int dx = 0; dx < sample_rate; ++dx ) {
+          Color tmpColor;
+          uint8_to_float( &tmpColor.r , &supersample_target[4 * ( (x + y * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] );
+          rmax=max(rmax,tmpColor.r);
+          gmax=max(gmax,tmpColor.g);
+          bmax=max(bmax,tmpColor.b);
+        }
+      }
+    }
+  }*/
+
+  rmax=max(rmax,eps);
+  gmax=max(gmax,eps);
+  bmax=max(bmax,eps);
+
+  for( int y = 0; y < target_h; ++y ) {
+    for( int x = 0; x < target_w; ++x ) {
+      for( int dy = 0; dy < sample_rate; ++dy ) {
+        for( int dx = 0; dx < sample_rate; ++dx ) {
+          Color tmpColor;
+          uint8_to_float( &tmpColor.r , &supersample_target[4 * ( (x + y * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] );
+          
+          tmpColor.r/=rmax;
+          tmpColor.g/=gmax;
+          tmpColor.b/=bmax;
+
+          float_to_uint8( &supersample_target[4 * ( (x + y * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] , &tmpColor.r );
+        }
+      }
+    }
+  }
+
+  //cerr<<rmax<<" "<<gmax<<" "<<bmax<<"\n";
+
+  queue<pair<int,int> > Q;
+
+  for(int ix=0; ix<sample_rate*target_w; ++ix)
+    for(int iy=0; iy<sample_rate*target_h; ++iy) {
+      int sx=ix/sample_rate, dx=ix%sample_rate;
+      int sy=iy/sample_rate, dy=iy%sample_rate;
+      if(targeted[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )]==1)
+      {
+        Q.push(pair<int,int>(ix,iy));
+        dst[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )]=0;
+      }
+    }
+
+  int maxdst=0;
+  while(not Q.empty()) {
+    pair<int,int> cpt=Q.front(); Q.pop();
+    int ix=cpt.first, iy=cpt.second;
+    int sx=ix/sample_rate, dx=ix%sample_rate;
+    int sy=iy/sample_rate, dy=iy%sample_rate;
+
+    for(int dir=0; dir<4; ++dir)
+    {
+      int nix=ix+xinc[dir], niy=iy+yinc[dir];
+      if(0<=nix and nix<sample_rate*target_w and 0<=niy and niy<sample_rate*target_h) {
+        int nsx=nix/sample_rate, ndx=nix%sample_rate;
+        int nsy=niy/sample_rate, ndy=niy%sample_rate;
+
+        if(not targeted[4 * ( (nsx + nsy * target_w) * sample_rate * sample_rate + sample_rate * ndy + ndx )]) {
+          dst[4 * ( (nsx + nsy * target_w) * sample_rate * sample_rate + sample_rate * ndy + ndx )] =
+            dst[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] + 1;
+          maxdst=max(maxdst,dst[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] + 1);
+          targeted[4 * ( (nsx + nsy * target_w) * sample_rate * sample_rate + sample_rate * ndy + ndx )] = 1;
+          Q.push(pair<int,int>(nix,niy));
+        }
+      }
+    }
+  }
+
+  for( int sy = 0; sy < target_h; ++sy ) {
+    for( int sx = 0; sx < target_w; ++sx ) {
+      for( int dy = 0; dy < sample_rate; ++dy ) {
+        for( int dx = 0; dx < sample_rate; ++dx ) {
+          if(dst[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )]>0)
+          {
+            Color tmpColor=Color(0.0,1.0,0.0)*(1.0*(dst[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )]-1)/(maxdst-1));
+            float_to_uint8(&supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )],&tmpColor.r);
+
+            //cerr<<sx<<" "<<sy<<" : "<<dst[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )]<<" "<<maxdst<<" "<<tmpColor<<"\n";
+          }
+        }
+      }
+    }
+  }
+
+  // -------- End Added -----------
+
+  for( int y = 0; y < target_h; ++y ) {
     for( int x = 0; x < target_w; ++x ) {
       Color color=Color(0,0,0,0);
-      for( int dy = 0; dy < sample_rate; ++dy )
+      for( int dy = 0; dy < sample_rate; ++dy ) {
         for( int dx = 0; dx < sample_rate; ++dx ) {
           Color tmpColor;
           uint8_to_float( &tmpColor.r , &supersample_target[4 * ( (x + y * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] );
@@ -388,7 +717,9 @@ void SoftwareRendererImp::resolve( void ) {
           color+=tmpColor;
         }
       float_to_uint8( &render_target[4 * (x + y * target_w)] , &color.r );
+      }
     }
+  }
 
   return;
 }

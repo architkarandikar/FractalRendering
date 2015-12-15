@@ -2,6 +2,7 @@
 #define CMU462_TEXTURE_H
 
 #include "CMU462.h"
+#include <iostream>
 
 using namespace std;
 
@@ -41,6 +42,8 @@ inline void float_to_uint8( unsigned char* dst, float src[4] ) {
   dst_uint8[1] = (uint8_t) ( 255.f * max( 0.0f, min( 1.0f, src[1])));
   dst_uint8[2] = (uint8_t) ( 255.f * max( 0.0f, min( 1.0f, src[2])));
   dst_uint8[3] = (uint8_t) ( 255.f * max( 0.0f, min( 1.0f, src[3])));
+
+  //cerr<<"### "<<(int)dst[0]<<" "<<(int)dst[1]<<" "<<(int)dst[2]<<" :: "<<src[0]<<" "<<src[1]<<" "<<src[2]<<"\n";
 }
 
 class Sampler2D {

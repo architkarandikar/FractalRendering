@@ -23,7 +23,8 @@ typedef enum e_SVGElementType {
   POLYGON,
   ELLIPSE,
   IMAGE,
-  GROUP
+  GROUP,
+  IFS
 } SVGElementType;
 
 struct Style {
@@ -114,6 +115,16 @@ struct Image : SVGElement {
   
 };
 
+struct Ifs : SVGElement {
+
+  Ifs() : SVGElement  ( IFS ) { }
+  Vector2D seed;
+  std::vector<Matrix3x3> transformations;
+  std::vector<float> probabilities;
+  Matrix3x3 renderTransformation;
+};
+
+
 struct SVG {
 
   ~SVG();
@@ -145,6 +156,7 @@ class SVGParser {
   static void parseEllipse   ( XMLElement* xml, Ellipse*  ellipse     );
   static void parseImage     ( XMLElement* xml, Image*    image       );
   static void parseGroup     ( XMLElement* xml, Group*    group       );
+  static void parseIfs       ( XMLElement* xml, Ifs*      ifs         );
 
 
 }; // class SVGParser
