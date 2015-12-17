@@ -1,4 +1,0 @@
-(function(b,c,e){function a(f,g){try{if(Modernizr.localstorage===true){if(g===e||g===null){localStorage.removeItem(f);}else{localStorage.setItem(f,g);}return true;}else{return false;}}catch(h){return false;}}function d(f){var g="";try{if(Modernizr.localstorage===true){g=localStorage.getItem(f);}}catch(h){}return g;}b.completeBooking=function(l,j,n,h,m,k,f,i){k.show();var g={tripid:l,piid:j,productType:h,isMerchant:m};c.ajax({type:"POST",url:n,data:g,cache:false}).done(function(o){k.hide();if(o.error!==e){if(i&&c.isFunction(i)){i(o);}}else{if(f&&c.isFunction(f)){f(o);}}}).fail(function(o,q,p){if(console!==e&&console.log!==e){console.log(o,q,p);}k.hide();if(i&&c.isFunction(i)){i(g);}});};})(window.Crosssell=window.Crosssell||{},jQuery);
-/*!  generated on 2015-09-17 20:56:54.411 PDT(-0700) in 0 ms  */
-
-/*!  served in 1 ms  */

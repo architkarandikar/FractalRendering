@@ -1,0 +1,15 @@
+Sierpensky Triangle (Pic)
+Barnsley Fern (Pic)
+Irradiance Caching
+Distance function
+ -- BFS: O(number of pixels)
+ -- pow(,0.5)
+Parser
+ -- type: 0 -- specify transformations and probabilities -- e.g. -- Barnsley Fern
+ -- type: 1 -- sierpensky IFSs -- specify #vertices, center and ratio
+ -- type: 2 -- fractal frame with sin()
+ -- specify background and foreground colours
+ -- specify post-transform
+Fractal Frame
+ -- Use of non-linear transforms (x=sin x, y=sin y)
+ -- Use of colours in the transforms (Sierpensky)

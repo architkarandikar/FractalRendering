@@ -1,0 +1,11 @@
+<svg height="600" width="600">
+	<ifs
+		fill="#ff0000"
+		bg="#ff0000"
+		type="2"
+		seedx="300"
+		seedy="300"
+		weighted_transform_1="matrix(7,3,6,4,3,-2),1.0"
+		render_transformation="matrix(500,0,0,350,300.0,300.0)"
+	/>
+</svg>

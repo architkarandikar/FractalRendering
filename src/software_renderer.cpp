@@ -292,7 +292,7 @@ void SoftwareRendererImp::draw_ifs( Ifs& ifs ) {
     Vector2D rp=transform(Vector2D(tp.x,tp.y));
     rasterize_point_2(rp.x, rp.y, color);
 
-    for(int iter=0; iter<(ifs.type==3 ? 30000000 : 1000000); ++iter) {
+    for(int iter=0; iter<(ifs.type==2 ? 30000000 : 1000000); ++iter) {
       float r=(float)(std::rand()) / RAND_MAX;
 
       float cp=0.0;
@@ -301,7 +301,7 @@ void SoftwareRendererImp::draw_ifs( Ifs& ifs ) {
 
         if(r<=cp) {
           p = ifs.transformations[i] * p;
-          if(ifs.type==3) {
+          if(ifs.type==2) {
             p.x=sin(p.x);
             p.y=sin(p.y);
           }
