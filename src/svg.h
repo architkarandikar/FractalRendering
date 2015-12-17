@@ -30,6 +30,7 @@ typedef enum e_SVGElementType {
 struct Style {
   Color strokeColor;
   Color fillColor;
+  Color bgColor;
   float strokeWidth;
   float miterLimit;
 };
@@ -122,6 +123,11 @@ struct Ifs : SVGElement {
   std::vector<Matrix3x3> transformations;
   std::vector<float> probabilities;
   Matrix3x3 renderTransformation;
+  int type;//serpeinski or bransley
+  double r;//ratio
+  double radius;
+  int num_points;
+  vector<Vector2D> points;
 };
 
 

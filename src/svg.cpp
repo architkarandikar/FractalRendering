@@ -157,6 +157,9 @@ void SVGParser::parseElement( XMLElement* xml, SVGElement* element ) {
   const char* fill = xml->Attribute( "fill" );
   if( fill ) style->fillColor = Color::fromHex( fill );
 
+  const char* bg = xml->Attribute( "bg" );
+  if( bg ) style->bgColor = Color::fromHex( bg );
+
   const char* fill_opacity = xml->Attribute( "fill-opacity" );
   if( fill_opacity ) style->fillColor.a = atof( fill_opacity );
 
@@ -391,8 +394,23 @@ void SVGParser::parseIfs( XMLElement* xml, Ifs* ifs ) {
   //cerr<<"Here\n";
 
   stringstream ss;
+  ifs->type = xml->IntAttribute("type");
   ifs->seed = Vector2D(xml->FloatAttribute( "seedx" ),
                        xml->FloatAttribute( "seedy" ));
+  if(!ifs->type){
+    ifs->r = xml->DoubleAttribute("ratio");
+    ifs->num_points = xml->IntAttribute("numPoints");
+    ifs->radius = xml->FloatAttribute("radius");
+    if(ifs->radius==0.0) ifs->radius=200.0;
+    
+    double pi = 3.14159265;
+    double theta = 2*pi/(ifs->num_points);
+    for(int i=0;i<ifs->num_points;i++)
+    {
+      Vector2D point(ifs->radius*cos(i*theta),ifs->radius*sin(i*theta));
+      (ifs->points).push_back((point + Vector2D(300,300)));
+    }
+  }
 
   for(int i=1; true; ++i)
   {
@@ -463,127 +481,6 @@ void SVGParser::parseIfs( XMLElement* xml, Ifs* ifs ) {
   for(int i=0; i<(int)ifs->probabilities.size(); ++i)
     ifs->probabilities[i]/=sump;
 }
-
-/* ***
-if ( trans ) {
-    
-    // NOTE (sky):
-    // This implements the SVG transformation specification. All the SVG 
-    // transformations are supported as documented in the link below:
-    // https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/transform
-
-    // consolidate transformation
-    Matrix3x3 transform = Matrix3x3::identity();
-
-    string trans_str = trans; size_t paren_l, paren_r;
-    while ( trans_str.find_first_of('(') != string::npos ) {
-
-      paren_l = trans_str.find_first_of('(');
-      paren_r = trans_str.find_first_of(')');
-
-      string type = trans_str.substr(0, paren_l);
-      string data = trans_str.substr(paren_l + 1, paren_r - paren_l - 1);
-
-      if ( type == "matrix" ) {
-        
-        string matrix_str = data;
-        replace( matrix_str.begin(), matrix_str.end(), ',', ' ');
-
-        stringstream ss (matrix_str);
-        float a; float b; float c; float d; float e; float f;
-        ss >> a; ss >> b; ss >> c; ss >> d; ss >> e; ss >> f;
-
-        Matrix3x3 m;
-        m(0,0) = a; m(0,1) = c; m(0,2) = e;
-        m(1,0) = b; m(1,1) = d; m(1,2) = f;
-        m(2,0) = 0; m(2,1) = 0; m(2,2) = 1;        
-        transform = transform * m;
-      
-      } else if ( type == "translate" ) {
-        
-        stringstream ss (data);
-        float x; if (!(ss >> x)) x = 0;
-        float y; if (!(ss >> y)) y = 0;
-
-        Matrix3x3 m = Matrix3x3::identity();
-        
-        m(0,2) = x;
-        m(1,2) = y;
-        
-        transform = transform * m;
-
-      } else if (type == "scale" ) {
-
-        stringstream ss (data);
-        float x; if (!(ss >> x)) x = 1;
-        float y; if (!(ss >> y)) y = 1;
-
-        Matrix3x3 m = Matrix3x3::identity();
-        
-        m(0,0) = x;
-        m(1,1) = y;
-
-        transform = transform * m;
-
-      } else if (type == "rotate") {
-
-        stringstream ss (data);
-        float a; if (!(ss >> a)) a = 0;
-        float x; if (!(ss >> x)) x = 0;
-        float y; if (!(ss >> y)) y = 0;
-
-        if ( x != 0 || y != 0 ) {
-
-          Matrix3x3 m = Matrix3x3::identity();
-
-          m(0,0) = cos(a*PI/180.0f); m(0,1) = -sin(a*PI/180.0f);
-          m(1,0) = sin(a*PI/180.0f); m(1,1) =  cos(a*PI/180.0f);
-
-          m(0,2) = -x * cos(a*PI/180.0f) + y * sin(a*PI/180.0f) + x;
-          m(1,2) = -x * sin(a*PI/180.0f) - y * cos(a*PI/180.0f) + y;
-
-          transform = transform * m;
-
-        } else {
-          
-          Matrix3x3 m = Matrix3x3::identity();
-          
-          m(0,0) = cos(a*PI/180.0f); m(0,1) = -sin(a*PI/180.0f);
-          m(1,0) = sin(a*PI/180.0f); m(1,1) =  cos(a*PI/180.0f);
-          
-          transform = transform * m;
-        }
-        
-      } else if (type == "skewX" ) {
-
-        stringstream ss (data);
-        float a; ss >> a;
-
-        Matrix3x3 m = Matrix3x3::identity();
-        
-        m(0,1) = tan(a*PI/180.0f);
-
-        transform = transform * m;
-
-      } else if (type == "skewY" ) {
-
-        stringstream ss (data);
-        float a; ss >> a;
-
-        Matrix3x3 m = Matrix3x3::identity();
-        
-        m(1,0) = tan(a*PI/180.0f);
-
-        transform = transform * m;
-
-      } else {
-        cerr << "unknown transformation type: " << type << endl;
-      }
-
-      size_t end = paren_r + 2;
-      trans_str.erase(0, end);
-    }
-*/
 
 void SVGParser::parseGroup( XMLElement* xml, Group* group ) {
 

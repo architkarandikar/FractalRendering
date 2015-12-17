@@ -13,7 +13,7 @@ namespace CMU462 { // CMU462
 class SoftwareRenderer : public SVGRenderer {
  public:
 
-  SoftwareRenderer( ) : sample_rate (1) { rmax=0.0; gmax=0.0; bmax=0.0; }
+  SoftwareRenderer( ) : sample_rate (1) { emax=0.0; }
 
   // Free used resources
   virtual ~SoftwareRenderer( ) { }
@@ -61,7 +61,7 @@ class SoftwareRenderer : public SVGRenderer {
   Matrix3x3 canvas_to_screen;
   Matrix3x3 group_transformation;
 
-  float rmax,gmax,bmax;
+  float emax;
 
 }; // class SoftwareRenderer
 
@@ -85,9 +85,12 @@ class SoftwareRendererImp : public SoftwareRenderer {
 
   // Supersampling buffer
   unsigned char* supersample_target;
+  float* supersample_target2;
   //------ Added --------------
   int* targeted;
   int* dst;
+  Color bgColor;
+  Color fgColor;
   //------ End Added ----------
 
  private:
@@ -127,7 +130,7 @@ class SoftwareRendererImp : public SoftwareRenderer {
   // Rasterization //
 
   // Add to target
-  void add_to_target( int ix, int iy, Color color );
+  void add_to_target( int ix, int iy, float energy );
 
   // rasterize a point
   void rasterize_point( float x, float y, Color color );
@@ -185,9 +188,12 @@ class SoftwareRendererRef : public SoftwareRenderer {
   void set_render_target( unsigned char* target_buffer,
                           size_t width, size_t height );
 
+
  private:
 
   // Primitive Drawing //
+
+
 
   // Draws an SVG element
   void draw_element( SVGElement* element );

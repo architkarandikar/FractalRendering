@@ -34,6 +34,8 @@ inline void alpha_compost( unsigned char* dst, Color newColor ) {
 
 void SoftwareRendererImp::draw_svg( SVG& svg ) {
 
+  //cerr<<svg.width<<" "<<svg.height<<"\n";
+
   supersample_target = new unsigned char[4 * sample_rate * sample_rate * target_w * target_h];
   memset(supersample_target, 255, 4 * sample_rate * sample_rate * target_w * target_h);
   //------ Added --------------
@@ -42,9 +44,6 @@ void SoftwareRendererImp::draw_svg( SVG& svg ) {
 
   dst = new int[4 * sample_rate * sample_rate * target_w * target_h];
   memset(dst, 0, 16 * sample_rate * sample_rate * target_w * target_h);
-
-  supersample_target2 = new float[sample_rate * sample_rate * target_w * target_h];
-  memset(supersample_target2, 0, sample_rate * sample_rate * target_w * target_h);
   //------ End Added ----------
 
   // -------- Removed -------------
@@ -68,6 +67,73 @@ void SoftwareRendererImp::draw_svg( SVG& svg ) {
   rasterize_line(a.x, a.y, c.x, c.y, Color::Black);
   rasterize_line(d.x, d.y, b.x, b.y, Color::Black);
   rasterize_line(d.x, d.y, c.x, c.y, Color::Black);
+
+  // -------- Added -------------
+
+  /*Vector2D A=transform(Vector2D(svg.width/2,5));
+  Vector2D B=transform(Vector2D(5,svg.height-5));
+  Vector2D C=transform(Vector2D(svg.width-5,svg.height-5));
+
+  //rasterize_line(p1.x, p1.y, p2.x, p2.y, Color::Black);
+  //rasterize_point(p1.x, p1.y, Color::Black);
+  //rasterize_point(p1.x+1, p1.y, Color::Black);
+  //rasterize_point(p1.x, p1.y+1, Color::Black);
+  //rasterize_point(p1.x+1, p1.y+1, Color::Black);
+
+  rasterize_line(A.x, A.y, B.x, B.y, Color(1.0,0.0,0.0));
+  rasterize_line(B.x, B.y, C.x, C.y, Color(1.0,0.0,0.0));
+  rasterize_line(C.x, C.y, A.x, A.y, Color(1.0,0.0,0.0));
+
+  Vector2D p=(A+B+C)/3.0;
+  //for(int i=0; i<1000000; ++i)
+  for(int i=0; i<1000000; ++i)
+  {
+    int r=std::rand()%3;
+    if(r==0) p=(p+A)/2;
+    else if(r==1) p=(p+B)/2;
+    else p=(p+C)/2;
+    rasterize_point(p.x, p.y, Color::Black);
+    //rasterize_point(p.x+1, p.y, Color::Black);
+    //rasterize_point(p.x, p.y+1, Color::Black);
+    //rasterize_point(p.x+1, p.y+1, Color::Black);
+  }*/
+
+  // -------- End Added -------------
+
+  // -------- Added -----------------
+
+  /*Vector2D p(0.0,0.0);
+  Vector2D tp=transform(Vector2D((p.x+3.5)*svg.width/7.0, (p.y+1)*svg.height/12.0));
+  rasterize_point_2(tp.x, tp.y, Color(0.0,1.0,0.0));
+
+  for(int i=0; i<1000000; ++i) {
+    Vector2D q;
+
+    int r=std::rand()%100;
+    if(r<1) {
+      q.x=0;
+      q.y=0.16*p.y;
+    }
+    else if(r<86) {
+      q.x=0.85*p.x+0.04*p.y;
+      q.y=-0.04*p.x+0.85*p.y+1.6;
+    }
+    else if(r<93) {
+      q.x=0.2*p.x-0.26*p.y;
+      q.y=0.23*p.x+0.22*p.y+1.6;
+    }
+    else {
+      q.x=-0.15*p.x+0.28*p.y;
+      q.y=0.26*p.x+0.24*p.y+0.44;
+    }
+
+    p=q;
+    Vector2D tp=transform(Vector2D((p.x+3.5)*svg.width/7.0, (p.y+1.0)*svg.height/12.0));
+    rasterize_point_2(tp.x, tp.y, Color(0.0,1.0,0.0));
+    //rasterize_point(tp.x, tp.y, Color::Black);
+  }*/
+
+  // -------- End Added -------------  
 
   // resolve and send to render target
   resolve();
@@ -100,9 +166,6 @@ void SoftwareRendererImp::draw_element( SVGElement* element ) {
 
   // Task 4 (part 1):
   // Modify this to implement the transformation stack
-
-  bgColor = element->style.bgColor;
-  fgColor = element->style.fillColor;
 
   transformation = group_transformation * (element->transform);
 
@@ -267,55 +330,142 @@ void SoftwareRendererImp::draw_group( Group& group ) {
 }
 
 void SoftwareRendererImp::draw_ifs( Ifs& ifs ) {
-  Color color = ifs.style.fillColor;
 
-  if(!ifs.type) {
-    Vector2D c(ifs.seed.x,ifs.seed.y);
-    Vector2D cn = transform(c);
+  //cerr<<ifs.transformations[0]<<ifs.probabilities[0]<<"\n";
+  /*Vector2D p(0.0,0.0);
+  Vector2D tp=transform(Vector2D((p.x+3.5)*600.0/7.0, (p.y+1.0)*600.0/12.0));
+  rasterize_point_2(tp.x, tp.y, Color(0.0,1.0,0.0));
 
-    for(int i=0;i<1000000;i++) {
-      int randNum = rand()%ifs.num_points;
-      Vector2D dir = -ifs.points[randNum] + c;
-      c.x = ifs.points[randNum].x + dir.x*(ifs.r);
-      c.y = ifs.points[randNum].y + dir.y*(ifs.r);
+  for(int i=0; i<1000000; ++i) {
+    Vector2D q;
 
+    float r=(float)(std::rand()) / RAND_MAX;
+    if(r<=0.01) {
+      q.x=0;
+      q.y=0.16*p.y;
+    }
+    else if(r<=0.86) {
+      q.x=0.85*p.x+0.04*p.y;
+      q.y=-0.04*p.x+0.85*p.y+1.6;
+    }
+    else if(r<=0.93) {
+      q.x=0.2*p.x-0.26*p.y;
+      q.y=0.23*p.x+0.22*p.y+1.6;
+    }
+    else {
+      q.x=-0.15*p.x+0.28*p.y;
+      q.y=0.26*p.x+0.24*p.y+0.44;
+    }
+
+    p=q;
+    if(i<10) cout<<p<<"\n";
+    Vector2D tp=transform(Vector2D((p.x+3.5)*600.0/7.0, (p.y+1.0)*600.0/12.0));
+    rasterize_point_2(tp.x, tp.y, Color(0.0,1.0,0.0));
+    //rasterize_point(tp.x, tp.y, Color::Black);
+  }*/
+
+  /*for(int i=0; i<4; ++i)
+    cerr<<ifs.transformations[i]<<ifs.probabilities[i]<<"\n";*/
+
+
+
+    //adding sepenski
+    if(!ifs.type){
+      Vector2D c(300,300);
       Vector2D cn = transform(c);
-      if(i<20) {
-       continue;
+      rasterize_point_2(cn.x,cn.y,Color::Black);
+      /*for(int i=0;i<100000;i++)
+      {
+        int randNum = rand()%ifs.num_points;
+        Vector2D dir = -transform(ifs.points[randNum]) + c;
+         c = (transform(ifs.points[randNum]) + dir)/(ifs.r);
+         //cout << randNum << " : " <<c << endl;
+          rasterize_point_2(c.x,c.y,Color::Black);
+      }*/
+      /*ifs.points[0] = transform(ifs.points[0]);
+      ifs.points[1] = transform(ifs.points[1]);
+      ifs.points[2] = transform(ifs.points[2]);*/
+      /*rasterize_line(ifs.points[0].x, ifs.points[0].y, ifs.points[1].x, ifs.points[1].y, Color::Black);
+      rasterize_line(ifs.points[1].x, ifs.points[1].y, ifs.points[2].x, ifs.points[2].y, Color::Black);
+      rasterize_line(ifs.points[2].x, ifs.points[2].y, ifs.points[0].x, ifs.points[0].y, Color::Black);
+      rasterize_point_2(ifs.points[0].x,ifs.points[0].y,Color(1.0,0.0,0.0));
+      rasterize_point_2(ifs.points[1].x,ifs.points[1].y,Color(1.0,0.0,0.0));
+      rasterize_point_2(ifs.points[2].x,ifs.points[2].y,Color(1.0,0.0,0.0));
+
+      cout << "p0: " << ifs.points[0] << endl;
+      cout << "p1: " << ifs.points[1] << endl;
+      cout << "p2: " << ifs.points[2] << endl;*/
+      for(int i=0;i<1000000;i++)
+      {
+        int randNum = rand()%ifs.num_points;
+        //double r = 1/(2*(1+cos(2*3.14159265/5)));
+        //cout << r << endl;
+        Vector2D dir = -ifs.points[randNum] + c;
+         c.x = ifs.points[randNum].x + dir.x*(ifs.r);
+         c.y = ifs.points[randNum].y + dir.y*(ifs.r);
+         //cout << randNum << " : " <<c << endl;
+         Vector2D cn = transform(c);
+        rasterize_point_2(cn.x,cn.y,Color::Black);
+          //rasterize_point(c.x,c.y,Color::Black);
       }
-      rasterize_point_2(cn.x,cn.y,color);
+      return;
+
     }
-  }
-  else {
-    Vector3D p(ifs.seed.x,ifs.seed.y,1.0);
-    Vector3D tp=ifs.renderTransformation*p;
-    Vector2D rp=transform(Vector2D(tp.x,tp.y));
-    rasterize_point_2(rp.x, rp.y, color);
 
-    for(int iter=0; iter<(ifs.type==3 ? 30000000 : 1000000); ++iter) {
-      float r=(float)(std::rand()) / RAND_MAX;
 
-      float cp=0.0;
-      for(int i=0; i<(int)ifs.transformations.size(); ++i) {
-        cp+=ifs.probabilities[i];
+  Vector3D p(ifs.seed.x,ifs.seed.y,1.0);
+  Vector3D tp=ifs.renderTransformation*p;
+  Vector2D rp=transform(Vector2D(tp.x,tp.y));
+  rasterize_point_2(rp.x, rp.y, Color(0.0,1.0,0.0));
 
-        if(r<=cp) {
-          p = ifs.transformations[i] * p;
-          if(ifs.type==3) {
-            p.x=sin(p.x);
-            p.y=sin(p.y);
-          }
-          break;
+  for(int iter=0; iter<1000000; ++iter) {
+    float r=(float)(std::rand()) / RAND_MAX;
+
+    float cp=0.0;
+    for(int i=0; i<(int)ifs.transformations.size(); ++i) {
+      cp+=ifs.probabilities[i];
+      //cerr<<cp<<"\n";
+
+      if(r<=cp) {
+        //if(iter<10) cout<<"@ "<<i<"\n";
+        p = ifs.transformations[i] * p;
+        p.x = sin(p.x)*cos(p.y);
+        p.y = tan(p.y);
+
+
+        /*
+        if(i==1)
+        {
+          p.x = sin(p.x);
+          p.y = sin(p.y);
         }
+        else if(i==2)
+        {
+          double radiusSquared = (p.x*p.x+p.y*p.y);
+          p.x = p.x/radiusSquared;
+          p.y = p.y/radiusSquared;
+        }
+        else
+        {
+          double radiusSquared = (p.x*p.x+p.y*p.y);
+          double x_old = p.x;
+          double y_old = p.y;
+          p.x = x_old*sin(radiusSquared) - y_old*cos(radiusSquared);
+          p.y = x_old*cos(radiusSquared) + y_old*sin(radiusSquared);
+        }*/
+        //p = 
+        break;
       }
-
-      tp=ifs.renderTransformation*p;
-      Vector2D rp=transform(Vector2D(tp.x,tp.y));
-      if(iter <20)
-       continue;
-      rasterize_point_2(rp.x,rp.y,color);
     }
+    //if(iter<10) cout<<"\n"<<p<<"\n";
+
+    tp=ifs.renderTransformation*p;
+    tp.x = 1.2*tp.x + 0;
+    tp.y = 1.2*tp.y + 100;
+    Vector2D rp=transform(Vector2D(tp.x,tp.y));
+    rasterize_point_2(rp.x, rp.y, Color(0.0,1.0,0.0));
   }
+  //cout<<ifs.renderTransformation;
 }
 
 // Rasterization //
@@ -324,19 +474,43 @@ void SoftwareRendererImp::draw_ifs( Ifs& ifs ) {
 // below are all defined in screen space coordinates
 
 // -------- Added ----------------
-void SoftwareRendererImp::add_to_target(int ix, int iy, float energy) {
+void SoftwareRendererImp::add_to_target(int ix, int iy, Color color) {
   int sx=ix/sample_rate, dx=ix%sample_rate;
   int sy=iy/sample_rate, dy=iy%sample_rate;
 
   unsigned char tmp[4];
+  float_to_uint8( tmp , &color.r );
+
+  /*if(color.r>0.0)
+    cerr<<" @@@ "<<color
+      <<" --- "<<(int)supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx ) + 0]
+      <<" --- "<<(int)supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx ) + 1]
+      <<" --- "<<(int)supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx ) + 2]<<"\n"
+      <<" --- "<<(int)tmp[0]
+      <<" --- "<<(int)tmp[1]
+      <<" --- "<<(int)tmp[2]<<"\n";*/
 
   if(targeted[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] == 0)
+  {
       targeted[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] = 1;
+      supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] = 0;
+      supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx) + 1] = 0;
+      supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx) + 2] = 0;
+  }
 
-  supersample_target2[(sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx] =
-    supersample_target2[(sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx]+energy;
-  
-  emax=max(emax,supersample_target2[(sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx]);
+  supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] =
+    (unsigned char)min((int)(supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )])+(int)tmp[0],255);
+  supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx) + 1] =
+    (unsigned char)min((int)(supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx) + 1])+(int)tmp[1],255);
+  supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx) + 2] =
+    (unsigned char)min((int)(supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx) + 2])+(int)tmp[2],255);
+  supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx ) + 3] = 255;
+  //supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx ) + 3] =
+    //min(supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx ) + 3] , (unsigned char)255);
+
+  rmax=max(rmax,tmp[0]/255.0f);
+  gmax=max(gmax,tmp[1]/255.0f);
+  bmax=max(bmax,tmp[2]/255.0f);
 }
 // -------- End Added ------------
 
@@ -361,10 +535,10 @@ void SoftwareRendererImp::rasterize_point_2( float x, float y, Color color ) {
   float x1=ex-fx, y1=ey-fy;
   float x2=1.0-x1, y2=1.0-y1;
 
-  add_to_target(ix,iy,x2*y2);
-  add_to_target(ix,iy+1,x2*y1);
-  add_to_target(ix+1,iy,x1*y2);
-  add_to_target(ix+1,iy+1,x1*y1);
+  add_to_target(ix,iy,x2*y2*color);
+  add_to_target(ix,iy+1,x2*y1*color);
+  add_to_target(ix+1,iy,x1*y2*color);
+  add_to_target(ix+1,iy+1,x1*y1*color);
 }
 // -------- End Added -----------
 
@@ -506,22 +680,45 @@ void SoftwareRendererImp::resolve( void ) {
   // Implement supersampling
   // You may also need to modify other functions marked with "Task 3".
 
-  emax=max(emax,eps);
+  // -------- Added ---------------
+
+  /*float rmax=0.0,gmax=0.0,bmax=0.0;
+  for( int y = 0; y < target_h; ++y ) {
+    for( int x = 0; x < target_w; ++x ) {  
+      for( int dy = 0; dy < sample_rate; ++dy ) {
+        for( int dx = 0; dx < sample_rate; ++dx ) {
+          Color tmpColor;
+          uint8_to_float( &tmpColor.r , &supersample_target[4 * ( (x + y * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] );
+          rmax=max(rmax,tmpColor.r);
+          gmax=max(gmax,tmpColor.g);
+          bmax=max(bmax,tmpColor.b);
+        }
+      }
+    }
+  }*/
+
+  rmax=max(rmax,eps);
+  gmax=max(gmax,eps);
+  bmax=max(bmax,eps);
 
   for( int y = 0; y < target_h; ++y ) {
     for( int x = 0; x < target_w; ++x ) {
       for( int dy = 0; dy < sample_rate; ++dy ) {
         for( int dx = 0; dx < sample_rate; ++dx ) {
-
-          float normEnergy=pow(supersample_target2[(x + y * target_w) * sample_rate * sample_rate + sample_rate * dy + dx]/emax,0.2);
-          Color tmpColor=normEnergy*fgColor;
-          tmpColor.a=1.0;
+          Color tmpColor;
+          uint8_to_float( &tmpColor.r , &supersample_target[4 * ( (x + y * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] );
+          
+          tmpColor.r/=rmax;
+          tmpColor.g/=gmax;
+          tmpColor.b/=bmax;
 
           float_to_uint8( &supersample_target[4 * ( (x + y * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )] , &tmpColor.r );
         }
       }
     }
   }
+
+  //cerr<<rmax<<" "<<gmax<<" "<<bmax<<"\n";
 
   queue<pair<int,int> > Q;
 
@@ -567,8 +764,10 @@ void SoftwareRendererImp::resolve( void ) {
         for( int dx = 0; dx < sample_rate; ++dx ) {
           if(dst[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )]>0)
           {
-            Color tmpColor=(bgColor)*pow((1.0*(dst[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )]-1)/(maxdst-1)),0.5);
+            Color tmpColor=Color(0.0,1.0,0.0)*(1.0*(dst[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )]-1)/(maxdst-1));
             float_to_uint8(&supersample_target[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )],&tmpColor.r);
+
+            //cerr<<sx<<" "<<sy<<" : "<<dst[4 * ( (sx + sy * target_w) * sample_rate * sample_rate + sample_rate * dy + dx )]<<" "<<maxdst<<" "<<tmpColor<<"\n";
           }
         }
       }

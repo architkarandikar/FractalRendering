@@ -1,6 +1,8 @@
 <svg height="600" width="600">
 	<ifs
 		fill="#00ff00"
+		bg="002E00"
+		type="1"
 		seedx="0"
 		seedy="0"
 		weighted_transform_1="matrix(0,0,0,0.16,0,0),1"
